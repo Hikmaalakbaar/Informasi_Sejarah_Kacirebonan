@@ -1,0 +1,233 @@
+    <!--
+    Informasi Sejarah Kacirebonan - Proof of Concept WebAR
+    Single-file prototype (index.html) using A-Frame for desktop/mobile 3D preview
+    and <model-viewer> for in-browser WebAR (enterAR()).
+
+    How to use:
+    - Put this file at the root of your site (index.html)
+    - Place 3D asset at: /assets/keraton.glb (or edit the path in the code)
+    - Deploy to Netlify (instructions in the chat message)
+
+    Notes / Caveats:
+    - model-viewer uses Android Scene Viewer and iOS Quick Look (Quick Look needs USDZ)
+    For the best iOS AR experience convert .glb -> .usdz or rely on A-Frame AR solutions.
+    - This file implements: 3D model preview with rotate/zoom, description text, and
+    a "Lihat dalam AR" button that tries to open native AR via model-viewer.
+    -->
+
+    <!doctype html>
+    <html lang="id">
+    <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Informasi Sejarah Kacirebonan — WebAR POC</title>
+
+    <!-- A-Frame (for 3D preview & interactions) -->
+    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+
+    <!-- model-viewer (for WebAR enterAR()) -->
+    <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+
+    <style>
+        :root{--bg:#0f1724;--card:#0b1220;--accent:#2dd4bf;--muted:#9ca3af}
+        *{box-sizing:border-box}
+        html,body{height:100%;margin:0;font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue';background:linear-gradient(180deg,#071025 0%, #071827 100%);color:#e6eef6}
+        header{padding:18px 20px;display:flex;align-items:center;gap:14px}
+        header h1{font-size:18px;margin:0}
+        main{max-width:980px;margin:12px auto;padding:18px}
+
+        .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.03));border-radius:12px;padding:14px;box-shadow:0 6px 18px rgba(2,6,23,0.6)}
+
+        /* 3D preview area */
+        .viewer{height:60vh;min-height:380px;border-radius:10px;overflow:hidden;position:relative}
+        .overlay-ui{position:absolute;left:12px;top:12px;z-index:20;display:flex;gap:8px}
+        .btn{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.04);padding:8px 12px;border-radius:8px;color:var(--accent);cursor:pointer}
+        .btn:active{transform:translateY(1px)}
+
+        /* Description area */
+        .meta{display:flex;gap:18px;align-items:center;margin-top:12px}
+        .meta .title{font-weight:600;font-size:16px}
+        .meta .desc{color:var(--muted)}
+
+        .controls{display:flex;gap:8px;margin-left:auto}
+
+        footer{margin-top:12px;color:var(--muted);font-size:13px}
+
+        /* Responsiveness */
+        @media (max-width:720px){
+        .viewer{height:55vh}
+        header h1{font-size:16px}
+        }
+
+        /* Hidden model-viewer (we use it only for AR enterAR()) */
+        model-viewer{position:fixed;right:-9999px;bottom:-9999px;width:1px;height:1px;pointer-events:none}
+    </style>
+    </head>
+    <body>
+    <header>
+        <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='36' height='36'><rect width='36' height='36' rx='8' fill='%232dd4bf'/><text x='50%' y='55%' font-size='18' font-family='Arial' text-anchor='middle' fill='%23081309'>K</text></svg>" alt="logo" style="width:44px;height:44px;border-radius:8px"/>
+        <div>
+        <h1>Informasi Sejarah Kacirebonan</h1>
+        <div style="font-size:13px;color:var(--muted)">Proof of Concept WebAR — A-Frame + &lt;model-viewer&gt;</div>
+        </div>
+    </header>
+
+    <main>
+        <section class="card">
+        <div class="viewer" id="viewer">
+            <!-- Overlay UI controls -->
+            <div class="overlay-ui">
+            <button id="resetBtn" class="btn">Reset View</button>
+            <button id="arBtn" class="btn">Lihat dalam AR</button>
+            </div>
+
+            <!-- A-Frame scene for 3D preview (not native AR) -->
+            <a-scene embedded renderer="logarithmicDepthBuffer: true" vr-mode-ui="enabled: false" id="aScene">
+            <a-assets>
+                <!-- The GLB model. Put your file in /assets/keraton.glb or change the path. -->
+                <a-asset-item id="keratonModel" src="assets/PIP.GLB"></a-asset-item>
+            </a-assets>
+
+            <!-- Camera (we use orbit-like controls via JS) -->
+            <a-entity id="cameraRig">
+                <a-camera id="camera" position="0 1.6 3"></a-camera>
+            </a-entity>
+
+            <!-- Lighting -->
+            <a-entity light="type: ambient; intensity: 0.6"></a-entity>
+            <a-entity light="type: directional; intensity: 0.8" position="0 4 2"></a-entity>
+
+            <!-- Ground for shadow reference -->
+            <a-plane rotation="-90 0 0" width="20" height="20" color="#0b1220" visible="false"></a-plane>
+
+            <!-- 3D model entity -->
+            <a-entity id="modelEntity" gltf-model="#keratonModel" position="0 0 0" rotation="0 180 0" scale="1 1 1" ></a-entity>
+
+            </a-scene>
+
+        </div>
+
+        <div class="meta">
+            <div>
+            <div class="title">Makam Sunan Gunung Jati</div>
+            <div class="desc">Sebuah ringkasan sejarah singkat ditampilkan di bawah model. Gunakan tombol di atas untuk melihat model dalam mode AR (jika perangkat mendukung).</div>
+            </div>
+
+            <div class="controls">
+            <label style="font-size:13px;color:var(--muted);align-self:center">Interaksi: sentuh/drag untuk rotasi, pinch atau mouse wheel untuk zoom</label>
+            </div>
+        </div>
+
+        <div style="margin-top:12px">
+            <div style="background:#071827;padding:12px;border-radius:8px">
+            <strong>Teks Sejarah:</strong>
+            <p style="margin:8px 0 0 0;color:var(--muted)">Makam Sunan Gunung Jati — salah satu tokoh penting dalam penyebaran Islam di wilayah Cirebon. (Contoh teks POC)</p>
+            </div>
+        </div>
+
+        <footer>
+            Untuk POC: scan QR yang mengarah ke halaman ini. Ganti file glb pada folder /assets lalu deploy ke Netlify.
+        </footer>
+        </section>
+    </main>
+
+    <!-- Hidden model-viewer element used to trigger AR session on supported devices -->
+    <model-viewer id="mv" src="assets/PIP.GLB" ios-src="assets/keraton.usdz" alt="Keraton GLB" ar ar-modes="webxr scene-viewer quick-look" camera-controls></model-viewer>
+
+    <script>
+        // Basic rotate & zoom interaction for the A-Frame model entity
+        (function(){
+        const sceneEl = document.querySelector('#aScene');
+        const model = document.getElementById('modelEntity');
+        let isPointerDown = false;
+        let lastX = 0, lastY = 0;
+        let rotationX = 0, rotationY = 180; // initial rotation
+        let scale = 1;
+
+        // Pointer interactions (mouse & touch)
+        const pointerDown = (evt) => {
+            isPointerDown = true;
+            const p = evt.touches ? evt.touches[0] : evt;
+            lastX = p.clientX; lastY = p.clientY;
+        };
+        const pointerUp = ()=> isPointerDown = false;
+        const pointerMove = (evt)=>{
+            if(!isPointerDown) return;
+            const p = evt.touches ? evt.touches[0] : evt;
+            const dx = p.clientX - lastX;
+            const dy = p.clientY - lastY;
+            lastX = p.clientX; lastY = p.clientY;
+            rotationX = rotationX - dy*0.1;
+            rotationY = rotationY + dx*0.2;
+            model.setAttribute('rotation', `${rotationX} ${rotationY} 0`);
+        };
+
+        // Wheel zoom
+        const wheel = (evt)=>{
+            evt.preventDefault();
+            const delta = Math.sign(evt.deltaY) * 0.05;
+            scale = Math.min(3, Math.max(0.3, scale - delta));
+            model.setAttribute('scale', `${scale} ${scale} ${scale}`);
+        };
+
+        // Pinch zoom (touch)
+        let lastDist = null;
+        const touchMove = (evt)=>{
+            if(evt.touches && evt.touches.length === 2){
+            const dx = evt.touches[0].clientX - evt.touches[1].clientX;
+            const dy = evt.touches[0].clientY - evt.touches[1].clientY;
+            const dist = Math.sqrt(dx*dx+dy*dy);
+            if(lastDist){
+                const diff = (dist - lastDist) * 0.005;
+                scale = Math.min(3, Math.max(0.3, scale + diff));
+                model.setAttribute('scale', `${scale} ${scale} ${scale}`);
+            }
+            lastDist = dist;
+            }
+        };
+        const touchEnd = ()=> lastDist = null;
+
+        // Attach events to the container (works on mobile & desktop)
+        const viewer = document.getElementById('viewer');
+        viewer.addEventListener('pointerdown', pointerDown);
+        window.addEventListener('pointerup', pointerUp);
+        viewer.addEventListener('pointermove', pointerMove);
+        viewer.addEventListener('wheel', wheel, {passive:false});
+
+        viewer.addEventListener('touchmove', touchMove, {passive:false});
+        viewer.addEventListener('touchend', touchEnd);
+
+        // Buttons
+        document.getElementById('resetBtn').addEventListener('click', ()=>{
+            rotationX = 0; rotationY = 180; scale = 1;
+            model.setAttribute('rotation', `${rotationX} ${rotationY} 0`);
+            model.setAttribute('scale', `${scale} ${scale} ${scale}`);
+        });
+
+        // AR button calls model-viewer's enterAR()
+        const arBtn = document.getElementById('arBtn');
+        arBtn.addEventListener('click', async ()=>{
+            const mv = document.getElementById('mv');
+            // Try to enter AR. model-viewer will request camera permission and open AR if supported.
+            try{
+            const canEnter = await mv.canActivateAR;
+            // Some browsers expose canActivateAR as a promise; fallback to try/catch
+            }catch(e){/* ignore */}
+
+            try{
+            // enterAR() returns a promise that resolves when AR session starts or QuickLook launched
+            if(typeof mv.enterAR === 'function'){
+                mv.enterAR();
+            } else {
+                alert('Mode AR tidak tersedia pada perangkat/penjelajah ini.');
+            }
+            }catch(err){
+            console.error('enterAR error', err);
+            alert('Gagal membuka mode AR — periksa dukungan perangkat atau console untuk detail.');
+            }
+        });
+
+        })();
+    </script>
+    </body>
+    </html>
