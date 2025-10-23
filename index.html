@@ -85,7 +85,7 @@
             <a-scene embedded renderer="logarithmicDepthBuffer: true" vr-mode-ui="enabled: false" id="aScene">
             <a-assets>
                 <!-- The GLB model. Put your file in /assets/keraton.glb or change the path. -->
-                <a-asset-item id="keratonModel" src="assets/PIP.GLB"></a-asset-item>
+                <a-asset-item id="keratonModel" src="assets/PIP.glb"></a-asset-item>
             </a-assets>
 
             <!-- Camera (we use orbit-like controls via JS) -->
@@ -132,7 +132,7 @@
     </main>
 
     <!-- Hidden model-viewer element used to trigger AR session on supported devices -->
-    <model-viewer id="mv" src="assets/PIP.GLB" ios-src="assets/keraton.usdz" alt="Keraton GLB" ar ar-modes="webxr scene-viewer quick-look" camera-controls></model-viewer>
+    <model-viewer id="mv" src="assets/PIP.glb" ios-src="assets/keraton.usdz" alt="Keraton GLB" ar ar-modes="webxr scene-viewer quick-look" camera-controls></model-viewer>
 
     <script>
         // Basic rotate & zoom interaction for the A-Frame model entity
