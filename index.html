@@ -21,6 +21,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Informasi Sejarah Kacirebonan — WebAR POC</title>
+    <!-- A-Frame + AR.js -->
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <script src="https://cdn.rawgit.com/jeromeetienne/AR.js/2.3.1/aframe/build/aframe-ar.js"></script>
+
 
     <!-- A-Frame (for 3D preview & interactions) -->
     <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
@@ -62,6 +66,18 @@
         /* Hidden model-viewer (we use it only for AR enterAR()) */
         model-viewer{position:fixed;right:-9999px;bottom:-9999px;width:1px;height:1px;pointer-events:none}
     </style>
+    <style>
+    #arButton {
+        background: #0066ff;
+        color: white;
+        border: none;
+        padding: 12px 20px;
+        border-radius: 8px;
+        font-size: 16px;
+        cursor: pointer;
+    }
+    </style>
+
     </head>
     <body>
     <header>
@@ -78,7 +94,7 @@
             <!-- Overlay UI controls -->
             <div class="overlay-ui">
             <button id="resetBtn" class="btn">Reset View</button>
-            <button id="arBtn" class="btn">Lihat dalam AR</button>
+            <button id="arButton">Lihat dalam AR</button>
             </div>
 
             <!-- A-Frame scene for 3D preview (not native AR) -->
@@ -229,5 +245,27 @@
 
         })();
     </script>
+    <script>
+    const arButton = document.getElementById('arButton');
+    const modelSrc = 'assets/keraton.glb';
+
+    arButton.addEventListener('click', () => {
+        if (navigator.xr && navigator.xr.isSessionSupported) {
+        // Browser mendukung WebXR, jalankan AR native
+        document.querySelector('model-viewer').enterAR();
+        } else {
+        // Fallback ke AR.js (kamera langsung)
+        document.body.innerHTML = `
+            <a-scene embedded arjs>
+            <a-marker preset="hiro">
+                <a-entity gltf-model="${modelSrc}" scale="0.5 0.5 0.5"></a-entity>
+            </a-marker>
+            <a-entity camera></a-entity>
+            </a-scene>
+        `;
+        }
+    });
+    </script>
+
     </body>
     </html>
